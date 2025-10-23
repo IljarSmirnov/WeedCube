@@ -1,0 +1,16 @@
+name: hsi-classification
+
+python_env: requirements.txt
+
+entry_points:
+  prepare:
+    parameters:
+      output_hdf5: {type: str, default: "X_y_patches.h5"}
+    command: "python prepare.py --output_hdf5 {output_hdf5}"
+
+  train:
+    parameters:
+      hdf5_path: {type: str, default: "X_y_patches.h5"}
+      epochs: {type: int, default: 5}
+      batch_size: {type: int, default: 32}
+    command: "python train.py --hdf5_path {hdf5_path} --epochs {epochs} --batch_size {batch_size}"
