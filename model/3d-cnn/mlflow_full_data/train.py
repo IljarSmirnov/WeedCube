@@ -1,11 +1,12 @@
 import argparse
 import tensorflow as tf
 from tensorflow.keras import callbacks, losses, optimizers
-from tensorflow.keras.Model import load_model
+from tensorflow.keras.models import load_model
 import mlflow
 import mlflow.tensorflow
 from utils import build_model, make_datasets
 import h5py
+import json
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -43,6 +44,16 @@ if __name__ == "__main__":
     with mlflow.start_run():
         mlflow.log_param("epochs", args.epochs)
         mlflow.log_param("batch_size", args.batch_size)
+        mlflow.log_params({
+            "batch_size": args.batch_size,
+            "epochs": args.epochs,
+            "learning_rate": 1e-5,
+            "optimizer": "adam",
+            "loss_fn": "SparseCategoricalCrossentropy",
+            "train_size_images": len(train_idx),
+            "val_size_images": len(val_idx),
+            "test_size_images": len(test_idx),
+        })
 
         if args.model_path == None:
             model = build_model()
@@ -64,11 +75,16 @@ if __name__ == "__main__":
             validation_steps = steps_per_epoch_val
         )
 
-        val_loss, val_acc = model.evaluate(dataset_test,steps=steps_per_epoch_test)
+        val_loss, val_acc = model.evaluate(dataset_test)
         mlflow.log_metric("val_loss", val_loss)
         mlflow.log_metric("val_acc", val_acc)
         model.save("final_model.keras")
-        # for x, y in dataset_train.take(1):
-        #     input_example = x # Take only the input data
-        #     break
-        # mlflow.tensorflow.log_model(model, "model", input_example=input_example)
+        #mlflow.tensorflow.log_model(model, artifact_path="model")
+        mlflow.tensorflow.log_model(
+            model, 
+            name="model"
+        )
+
+        with open("history.json", "w") as f:
+            json.dump(history.history, f)
+        mlflow.log_artifact("history.json")

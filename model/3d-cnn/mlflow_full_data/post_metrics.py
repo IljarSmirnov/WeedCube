@@ -3,7 +3,6 @@ import argparse
 from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.calibration import calibration_curve
 import seaborn as sns
-import h5py
 import utils
 import prepare
 import numpy as np

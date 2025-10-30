@@ -5,3 +5,5 @@ h5py
 scikit-image
 tensorflow
 wget
+json
+seaborn
