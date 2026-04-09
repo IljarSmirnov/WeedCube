@@ -4,7 +4,7 @@ import numpy as np
 from scipy.signal import savgol_filter, find_peaks
 import matplotlib.pyplot as plt
 
-def plot_shap_vectors(filename="phi_mean_all_class_{}.npy", type = "X"):
+def plot_shap_vectors(filename="phi_all_class_{}.npy", type = "X"):
     if type == "Y":
         d=joblib.load("scaler_pca.joblib")
         pca=d["pca"]
@@ -62,7 +62,7 @@ def plot_shap_vectors(filename="phi_mean_all_class_{}.npy", type = "X"):
         plt.tick_params(axis='x', labelsize=14)
         plt.tick_params(axis='y', labelsize=14)
         plt.tight_layout()
-        #plt.savefig('shap_graph.eps', format='eps', bbox_inches='tight')
+        plt.savefig('shap_graph.png', format='png', bbox_inches='tight')
         plt.show()
     return peaks_by_class_sg, peaks_by_class_raw
 def plot_peaks_distib(peaks_by_class_sg, peaks_by_class_raw):
@@ -74,7 +74,7 @@ def plot_peaks_distib(peaks_by_class_sg, peaks_by_class_raw):
     plt.subplot(1,2,2)
     for i in range(len(peaks_by_class_raw)):
         plt.plot([i]*len(peaks_by_class_raw[i]),peaks_by_class_raw[i],marker='o',linestyle=" ",alpha=0.7)
-    #plt.savefig("X_shap.pdf",format = "pdf", bbox_inches = 'tight')
+    plt.savefig("X_shap.pdf",format = "pdf", bbox_inches = 'tight')
     plt.show()
 
 def main(type="X"):

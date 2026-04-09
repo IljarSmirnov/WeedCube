@@ -1,9 +1,8 @@
+import argparse
 import math
 import numpy as np
 import h5py
-from tensorflow.keras.models import load_model, Model
-from sklearn.metrics import r2_score
-import matplotlib.pyplot as plt
+from tensorflow.keras.models import load_model
 
 def make_masked_ds(x, num, masks, side_ds):
     res = []
@@ -22,10 +21,10 @@ def make_masked_ds(x, num, masks, side_ds):
 
     return np.vstack(res)
 
-def prepare(file_path="/content/X_y_patches10.h5", image_num = 60,T=70, M=12000):
+def prepare(file_path, image_num,T, M, objects):
     with h5py.File(file_path) as f:
         X=f[f"X_{image_num}"]
-        g_ind=np.sort(np.random.choice(X.shape[0],40,replace=False))
+        g_ind=np.sort(np.random.choice(X.shape[0],objects,replace=False))
         X=X[g_ind]
     masks =[]
     mask_sizes = []
@@ -65,12 +64,10 @@ def prepare(file_path="/content/X_y_patches10.h5", image_num = 60,T=70, M=12000)
     return masks, mask_sizes, X, g_ind, side_ds
 
 
-def main():
-    M=12000
+def main(model_path, file_path, M, image_num,objects):
     T=70
-    image_num = 60
-    model = load_model("/content/best_model.keras")
-    masks, mask_sizes, X, g_ind, side_ds = prepare(file_path="/content/X_y_patches10.h5", image_num=image_num, T=T, M=M)
+    model = load_model(model_path)
+    masks, mask_sizes, X, g_ind, side_ds = prepare(file_path=file_path, image_num=image_num, T=T, M=M, objects=objects)
     weights = []
     for s in mask_sizes:
         if s == 0 or s == T:
@@ -116,3 +113,13 @@ def main():
 
         phi_all.append(phi_by_class)
     np.save(f"phi_mean_all_class_{image_num//10}.npy", phi_all)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model_path", type=str, default="best_model.keras",required=True)
+    parser.add_argument("--file_path", type=str, default="X_y_patches.h5",required=True)
+    parser.add_argument("--M", type=int, default=12000)
+    parser.add_argument("--image_num", type=int, default=60, required=True)
+    parser.add_argument("--objects", type=int, default=40)
+    args = parser.parse_args()
+
+    main(args.model_path, args.file_path, args.M, args.image_num, args.objects, args.T)

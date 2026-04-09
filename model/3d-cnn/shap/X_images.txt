@@ -1,0 +1,14 @@
+/content/drive/MyDrive/hsi data/canola/canola_1.npy
+/content/drive/MyDrive/hsi data/canola/canola_2.npy
+/content/drive/MyDrive/hsi data/redroot/redroot_pigweed_1.npy
+/content/drive/MyDrive/hsi data/redroot/redroot_pigweed_3.npy
+/content/drive/MyDrive/hsi data/kochia/tmp/kochia_1.npy
+/content/drive/MyDrive/hsi data/kochia/tmp/kochia_2.npy
+/content/drive/MyDrive/hsi data/waterhemp/tmp/waterhemp_1.npy
+/content/drive/MyDrive/hsi data/waterhemp/tmp/waterhemp_2.npy
+/content/drive/MyDrive/hsi data/sugarbeet/sugarbeet_1.npy
+/content/drive/MyDrive/hsi data/sugarbeet/sugarbeet_2.npy
+/content/drive/MyDrive/hsi data/soybean/soybean_1.npy
+/content/drive/MyDrive/hsi data/soybean/soybean_2.npy
+/content/drive/MyDrive/hsi data/ragweed/ragweed_1.npy
+/content/drive/MyDrive/hsi data/ragweed/ragweed_2.npy

@@ -1,3 +1,4 @@
+import argparse
 import math
 import numpy as np
 import h5py
@@ -24,12 +25,14 @@ def make_masked_ds(x, num, masks, side_ds, scaler, pca):
         res.append(new_x)
 
     return np.vstack(res)
+
 def transform_patch(patch, scaler, pca):
     h,w,c = patch.shape
     tmp = patch.reshape(h*w,c)
     tmp = scaler.transform(tmp)
     tmp = pca.transform(tmp)
     return tmp.reshape(h,w,70)
+
 def extract_patches(image, patch_size=(19, 19), stride=14):
     h, w, u = image.shape
     m, n = patch_size
@@ -42,35 +45,7 @@ def extract_patches(image, patch_size=(19, 19), stride=14):
     patches = patches.reshape(-1, m, n, u)
     return patches
 
-imgs = [
-    "/content/drive/MyDrive/hsi data/canola/canola_1.npy",
-    "/content/drive/MyDrive/hsi data/canola/canola_2.npy",
-    "/content/drive/MyDrive/hsi data/redroot/redroot_pigweed_1.npy",
-    "/content/drive/MyDrive/hsi data/redroot/redroot_pigweed_3.npy",
-    "/content/drive/MyDrive/hsi data/kochia/tmp/kochia_1.npy",
-    "/content/drive/MyDrive/hsi data/kochia/tmp/kochia_2.npy",
-    "/content/drive/MyDrive/hsi data/waterhemp/tmp/waterhemp_1.npy",
-    "/content/drive/MyDrive/hsi data/waterhemp/tmp/waterhemp_2.npy",
-    "/content/drive/MyDrive/hsi data/sugarbeet/sugarbeet_1.npy",
-    "/content/drive/MyDrive/hsi data/sugarbeet/sugarbeet_2.npy",
-    "/content/drive/MyDrive/hsi data/soybean/soybean_1.npy",
-    "/content/drive/MyDrive/hsi data/soybean/soybean_2.npy",
-    "/content/drive/MyDrive/hsi data/ragweed/ragweed_1.npy",
-    "/content/drive/MyDrive/hsi data/ragweed/ragweed_2.npy",
-]
-
-class_mapping = {
-    "canola": 0,
-    "kochia": 1,
-    "ragweed": 2,
-    "redroot": 3,
-    "soybean": 4,
-    "sugarbeet": 5,
-    "waterhemp": 6,
-}
-
-
-def prepare(pca,scaler,data_test,image_num = 10,T=224, M=12000, objects = 40):
+def prepare(pca,scaler,data_test,imgs,T, M, objects,image_num = 10):
     path_to_img =  imgs[image_num]
     X = np.load(path_to_img)
     X = extract_patches(X)
@@ -115,9 +90,6 @@ def prepare(pca,scaler,data_test,image_num = 10,T=224, M=12000, objects = 40):
     else:
         side_ds = np.vstack(np.asarray(side_ds))
 
-
-
-
     pca_side_ds = []
     for patch in side_ds:
         h,w,c = patch.shape
@@ -130,21 +102,21 @@ def prepare(pca,scaler,data_test,image_num = 10,T=224, M=12000, objects = 40):
     return masks,mask_sizes,X,side_ds, pca_side_ds, g_ind
 
 
-def main(model_test = None, data_test = None):
-    M = 10000
-    T = 224
-    image_num = 10
-    tmp_dict = joblib.load("/content/scaler_pca.joblib")
+def main(imgs_path,M, image_num,objects,model_path,scaler_path,model_test = None, data_test = None):
+    T=224
+    with open(imgs_path) as f:
+        imgs = f.read().splitlines()
+    tmp_dict = joblib.load(scaler_path)
     pca = tmp_dict['pca']
     scaler = tmp_dict['scaler']
-    model = load_model("/content/best_model (3).keras") 
+    model = load_model(model_path) 
     if model_test is not None:
         for layer in model.layers:
             weights = layer.get_weights()
             if weights:
                 shuffled = [np.random.permutation(w.flat).reshape(w.shape) for w in weights]
                 layer.set_weights(shuffled)
-    masks, mask_sizes, X, side_ds, pca_side_ds, g_ind = prepare(pca,scaler,data_test,image_num=image_num, T=T, M=M)
+    masks, mask_sizes, X, side_ds, pca_side_ds, g_ind = prepare(pca,scaler,data_test,imgs,T,M,objects,image_num)
 
     weights = []
     for s in mask_sizes:
@@ -152,10 +124,8 @@ def main(model_test = None, data_test = None):
             weights.append(1e6)
         else:
             weights.append((T-1) / ( math.comb(T, int(s)) * s * (T - s) ))
-    if data_test is not None:
-        W = np.ones_like(weights)
-    else:
-        W = np.array(weights) 
+
+    W = np.array(weights) 
 
     X_design =np.array(masks)
     n_classes = 7
@@ -166,10 +136,10 @@ def main(model_test = None, data_test = None):
     for l in range(len(g_ind)):
         if data_test is not None:
             x = np.random.rand(1, 19, 19, T) 
-            x_pca = np.expand_dims(transform_patch(X[l], scaler, pca),axis=0)
+            x_pca = np.expand_dims(transform_patch(x[0], scaler, pca),axis=0)
         else:
             x=np.expand_dims(X[l],axis=0)
-            x_pca = np.expand_dims(transform_patch(x[0], scaler, pca),axis=0)
+            x_pca = np.expand_dims(transform_patch(X[l], scaler, pca),axis=0)
 
         masked_ds = make_masked_ds(x,num,masks,side_ds,scaler,pca)
         preds = model.predict(masked_ds)
@@ -202,4 +172,26 @@ def main(model_test = None, data_test = None):
 
         phi_all.append(phi_by_class.copy())
     np.save(f"phi_all_class_{image_num//2}.npy", phi_all)
-main()
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--imgs_path", type=str, default="X_images.txt",required=True)
+    parser.add_argument("--data_test", type=int, default=None)
+    parser.add_argument("--model_test", type=int, default=None)
+    parser.add_argument("--M", type=int, default=12000)
+    parser.add_argument("--image_num", type=int, default=10,required=True)
+    parser.add_argument("--objects", type=int, default=40)
+    parser.add_argument("--model_path", type=str, default="/content/best_model.keras",required=True)
+    parser.add_argument("--scaler_path", type=str, default="scaler_pca.joblib",required=True)
+    args = parser.parse_args()
+
+    main(
+        imgs_path=args.imgs_path,
+        M=args.M,
+        image_num=args.image_num,
+        objects=args.objects,
+        model_path=args.model_path,
+        scaler_path=args.scaler_path,
+        model_test=args.model_test,
+        data_test=args.data_test
+    )
