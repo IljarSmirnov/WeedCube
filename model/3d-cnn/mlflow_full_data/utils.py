@@ -15,9 +15,6 @@ def make_generator(hdf5_path, indices):
             for idx in indices:
                 X = f[f"X_{idx}"][:]
                 y = f[f"y_{idx}"][()]
-                #tmp = np.zeros((7,))
-                #tmp[y] = 1
-                #labels = np.tile(tmp, (X.shape[0],1))
                 labels = np.full(X.shape[0], y, dtype=np.int32)
                 yield X, labels
     return generator
@@ -68,21 +65,3 @@ def build_model(input_shape = (19,19,T)):
     output = layers.Dense(7, activation="softmax")(x)
     model = models.Model(inp, output)
     return model
-'''
-def build_model(input_shape = (19,19,T)):
-  inp = layers.Input(input_shape)
-  conv1 = layers.Conv2D(128,kernel_size = (3,3),padding = "same")(inp)
-  conv1 = layers.Activation("relu")(conv1)
-  pool1 = layers.MaxPooling2D( pool_size = (2,2))(conv1)
-  pool1 = layers.Reshape((9,9,128,1))(pool1)
-  conv2 = layers.Conv3D(1,kernel_size = (1,1,8),strides = (1,1,5))(pool1)
-  conv2 = layers.Activation("relu")(conv2)
-  pool2 = layers.MaxPooling3D((2,2,1))(conv2)
-  conv3 = layers.Conv3DTranspose(200,kernel_size=(3,3,39),padding = "same")(pool2)
-  flat = layers.Flatten()(conv3)
-  dense1 = layers.Dense(200,"relu")(flat)
-  dense2 = layers.Dense(7,"softmax")(dense1)
-  output = dense2
-  model = models.Model(inp,output)
-  return model
-'''

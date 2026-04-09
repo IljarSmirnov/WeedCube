@@ -9,7 +9,7 @@ from skimage.util import view_as_windows
 import wget
 import joblib
 from sklearn.model_selection import train_test_split
-# маппинг классов -> архивов
+
 ZIP_URLS = {
     "canola": "https://agdatacommons.nal.usda.gov/ndownloader/files/44757771",
     "kochia": "https://agdatacommons.nal.usda.gov/ndownloader/files/44735655",
@@ -35,29 +35,24 @@ def process_zip(npy_path, scaler, pca, hdf5_file, class_id, T=70):
     print(f"Processing {npy_path} for HDF5...")
 
     try:
-        # Загружаем .npy файл
-        img = np.load(npy_path)  # (H, W, B)
+        img = np.load(npy_path)
         H, W, B = img.shape
         print(f"Loaded {npy_path}, shape: {H}x{W}x{B}")
 
-        # Нормализация и PCA
         flat = img.reshape(-1, B)
         flat_scaled = scaler.transform(flat)
         flat_reduced = pca.transform(flat_scaled)
         img_reduced = flat_reduced.reshape(H, W, T)
         print(f"Applied PCA, reduced shape: {H}x{W}x{T}")
 
-        # Извлечение патчей
         patches = extract_patches(img_reduced)
         if patches.size == 0:
             print(f"Warning: No patches extracted from {npy_path}")
             return
         print(f"Extracted {patches.shape[0]} patches from {npy_path}")
 
-        # Создаём метки
         labels = np.full(patches.shape[0], class_id, dtype=np.int32)
 
-        # Сохраняем в HDF5
         ds_x = hdf5_file.create_dataset(f"X_{counter}", data=patches, dtype="float32")
         ds_y = hdf5_file.create_dataset(f"y_{counter}", data=labels, dtype="int32")
         print(f"Saved X_{counter} and y_{counter} to HDF5")
@@ -67,7 +62,6 @@ def process_zip(npy_path, scaler, pca, hdf5_file, class_id, T=70):
         print(f"Error processing {npy_path}: {e}")
         return
 
-    # Удаляем .npy файл после обработки
     if os.path.exists(npy_path):
         os.remove(npy_path)
         print(f"Removed {npy_path}")
@@ -87,16 +81,14 @@ def main(output_hdf5, n_components=70, max_files=2, proportion = (0.6,0.2,0.2)):
     val_idx, test_idx = train_test_split(val_test_idx, test_size=test_size_proportion, random_state=42)
 
 
-    # Шаг 1: fit scaler инкрементально
     scaler = StandardScaler()
     pca = IncrementalPCA(n_components=n_components)
     batch_size = 5000
-    B = 224  # число спектральных каналов
+    B = 224 
     train_counter = 0
     print("=== Pass 1: fitting scaler ===")
     for cls, url in ZIP_URLS.items():
         zip_path = f"{data_dir}/{cls}.zip"
-        # Скачиваем, если файла нет
         if not os.path.exists(zip_path):
             print(f"\nDownloading {cls} from {url}...")
             try:
@@ -106,17 +98,14 @@ def main(output_hdf5, n_components=70, max_files=2, proportion = (0.6,0.2,0.2)):
                 print(f"Failed to download {cls}: {e}. Пропускаем.")
                 continue
 
-        # Распаковываем только первые max_files .npy файлов
         try:
             with zipfile.ZipFile(zip_path, "r") as zip_ref:
                 members = [m for m in zip_ref.namelist() if m.endswith(".npy")]
-                print(f"Найдено {len(members)} .npy файлов в {cls}.zip")
                 for file_name in members[:max_files]:
                     print(f"Extracting {file_name}...")
                     zip_ref.extract(file_name, data_dir)
                     file_path = os.path.join(data_dir, file_name)
 
-                    # Загружаем и обрабатываем .npy
                     try:
                         img = np.load(file_path).reshape(-1, B)
                         # Fit scaler частями
@@ -131,12 +120,10 @@ def main(output_hdf5, n_components=70, max_files=2, proportion = (0.6,0.2,0.2)):
             print(f"Error extracting from {zip_path}: {e}")
             continue
 
-        # Удаляем ZIP-архив после распаковки
         if os.path.exists(zip_path):
             os.remove(zip_path)
             print(f"Removed {zip_path}")
 
-    # Шаг 2: fit PCA
     print("=== Pass 2: fitting PCA ===")
     train_counter = 0
     for cls, _ in ZIP_URLS.items():
@@ -156,7 +143,6 @@ def main(output_hdf5, n_components=70, max_files=2, proportion = (0.6,0.2,0.2)):
             except Exception as e:
                 print(f"Error processing {file_name} for PCA: {e}")
 
-    # Шаг 3: создаём HDF5 с патчами
     print("=== Pass 3: creating HDF5 ===")
     with h5py.File(output_hdf5, "w") as f:
         for cls, _ in ZIP_URLS.items():
@@ -176,7 +162,7 @@ def main(output_hdf5, n_components=70, max_files=2, proportion = (0.6,0.2,0.2)):
         f.attrs["test_indices"] = np.array(test_idx, dtype=np.int32)
         joblib.dump({"scaler": scaler, "pca": pca}, "scaler_pca.joblib")
 
-    print(f"✅ HDF5 dataset saved to {output_hdf5}")
+    print(f"HDF5 dataset saved to {output_hdf5}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

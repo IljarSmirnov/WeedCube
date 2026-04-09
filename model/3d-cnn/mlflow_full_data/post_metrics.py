@@ -68,46 +68,6 @@ def plot_calib(probs):
     plt.savefig("calib_curve.png")
     plt.show()
 
-def display_errors(imag_path, model, scaler, pca):
-    img = np.load(imag_path)
-    band_to_display = img[:, :, img.shape[2] // 2]
-    plt.imshow(band_to_display, cmap='gray')
-    plt.title('Grayscale Image from HSI Data')
-    plt.axis('off')
-    plt.show()
-
-    r,c,b = img.shape
-    img = img.reshape((r*c,b))
-    img = scaler.transform(img)
-    img = pca.transform(img)
-    img = img.reshape((r,c,70))
-    patches = prepare.extract_patches(img)
-    vpreds = model.predict(patches)
-    vpreds = np.argmax(vpreds,axis=1)
-
-    gray = band_to_display
-    m, n = (19,19)
-    pad_h = m // 2
-    pad_w = n // 2
-    gray = np.pad(gray, ((pad_h, pad_h), (pad_w, pad_w)), mode='reflect')
-    H,W = gray.shape
-
-    counter = 0
-    gray = gray.astype(np.int64)
-    counter = 0
-    for i in range(0, H - 19 + 1, 14):
-        for j in range(0, W - 19 + 1, 14):
-            if counter >= len(vpreds):
-                break
-            gray[i:i+19, j:j+19] = vpreds[counter] * 36
-            counter += 1
-
-    gray = np.clip(gray,0,255)
-    gray = gray.astype(np.int64)
-    plt.imshow(gray,cmap="gray")
-    plt.show()
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_hdf5", type=str, default="X_y_patches.h5")
